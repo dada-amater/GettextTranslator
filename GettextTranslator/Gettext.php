@@ -4,6 +4,7 @@ namespace GettextTranslator;
 
 use Nette;
 use Nette\Utils\Strings;
+use Nette\Caching\Cache;
 
 class Gettext extends Nette\Object implements Nette\Localization\ITranslator
 {
@@ -174,9 +175,9 @@ class Gettext extends Nette\Object implements Nette\Localization\ITranslator
 						'plural'=>$plural,
 						'dictionary'=>$this->dictionary
 					), array(
-						'expire' => time() * 60 * 60 * 2,
-						'files' => $files,
-						'tags' => array('dictionary-' . $this->lang)
+						Cache::EXPIRE => time() * 60 * 60 * 2,
+						Cache::FILES => $files,
+						Cache::TAGS => array('dictionary-' . $this->lang)
 					));
 				}
 			}
