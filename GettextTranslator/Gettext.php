@@ -54,6 +54,8 @@ class Gettext extends Nette\Object implements Nette\Localization\ITranslator
 		'X-Poedit-KeywordsList' => NULL
 	);
 
+	/** @var string */
+	private $plural;
 
 	public function __construct(Nette\Http\Session $session, Nette\Caching\IStorage $cacheStorage, Nette\Http\Response $httpResponse)
 	{
@@ -151,7 +153,9 @@ class Gettext extends Nette\Object implements Nette\Localization\ITranslator
 			}
 
 			if ($this->productionMode && isset($this->cache['dictionary-' . $this->lang])) {
-				$this->dictionary = $this->cache['dictionary-' . $this->lang];
+				$result = $this->cache['dictionary-' . $this->lang];
+				$this->dictionary=$result['dictionary'];
+				$this->plural=$result['plural'];
 
 			} else {
 				$files = array();
@@ -164,7 +168,12 @@ class Gettext extends Nette\Object implements Nette\Localization\ITranslator
 				}
 
 				if ($this->productionMode) {
-					$this->cache->save('dictionary-' . $this->lang, $this->dictionary, array(
+					reset($this->files);
+					$plural = $this->metadata[key($this->files)]['Plural-Forms'];
+					$this->cache->save('dictionary-' . $this->lang, array(
+						'plural'=>$plural,
+						'dictionary'=>$this->dictionary
+					), array(
 						'expire' => time() * 60 * 60 * 2,
 						'files' => $files,
 						'tags' => array('dictionary-' . $this->lang)
@@ -292,7 +301,11 @@ class Gettext extends Nette\Object implements Nette\Localization\ITranslator
 		}
 
 		if (!empty($message) && isset($this->dictionary[$message])) {
-			$tmp = preg_replace('/([a-z]+)/', '$$1', "n=$form;" . $this->metadata[$files[0]]['Plural-Forms']);
+			if(isset($this->plural))
+				$plural_string=$this->plural;
+			else
+				$plural_string=$this->metadata[$files[0]]['Plural-Forms'];
+			$tmp = preg_replace('/([a-z]+)/', '$$1', "n=$form;" . $plural_string);
 			eval($tmp);
 
 			$message = $this->dictionary[$message]['translation'];
@@ -348,7 +361,10 @@ class Gettext extends Nette\Object implements Nette\Localization\ITranslator
 		$this->loadDictonary();
 		$files = array_keys($this->files);
 
-		if (isset($this->metadata[$files[0]]['Plural-Forms'])) {
+		if(isset($this->plural)){
+			return (int) substr($this->plural, 9, 1);
+		}
+		elseif (isset($this->metadata[$files[0]]['Plural-Forms'])) {
 			return (int) substr($this->metadata[$files[0]]['Plural-Forms'], 9, 1);
 		}
 
